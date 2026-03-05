@@ -9,7 +9,12 @@ export interface UploadResult {
   ownerId: number;
 }
 
-export async function uploadVideo(
+/**
+ * Upload a video as a VK Clip (Клип) to the group's Clips section.
+ * Uses video.save with is_short_video=1 so the video appears in VK Clips,
+ * NOT on the group wall.
+ */
+export async function uploadVideoAsClip(
   filePath: string,
   title: string,
   description: string
@@ -18,12 +23,12 @@ export async function uploadVideo(
   const groupId = config.vk.groupId;
 
   if (!token || !groupId) {
-    throw new Error('VK token and group ID are required for video upload');
+    throw new Error('VK token and group ID are required for clip upload');
   }
 
-  contentLogger.info(`Starting VK video upload: ${title}`);
+  contentLogger.info(`Starting VK Clip upload: ${title}`);
 
-  // Step 1: Get upload server URL
+  // Step 1: Get upload server URL for a Clip (is_short_video=1)
   const saveResp = await axios.post('https://api.vk.com/method/video.save', null, {
     params: {
       access_token: token,
@@ -31,7 +36,8 @@ export async function uploadVideo(
       name: title,
       description,
       group_id: groupId,
-      no_comments: 0,
+      wallpost: 0,          // do NOT post to the group wall
+      is_short_video: 1,    // publish as VK Clip (Клип)
       privacy_view: 'all',
       privacy_comment: 'all',
     },
@@ -43,9 +49,9 @@ export async function uploadVideo(
   }
 
   const { upload_url, video_id, owner_id } = saveResp.data.response;
-  contentLogger.info(`Got upload URL, video_id=${video_id}, owner_id=${owner_id}`);
+  contentLogger.info(`Got Clip upload URL, video_id=${video_id}, owner_id=${owner_id}`);
 
-  // Step 2: Upload the file
+  // Step 2: Upload the file to the provided upload server
   const formData = new FormData();
   formData.append('video_file', fs.createReadStream(filePath));
 
@@ -57,10 +63,10 @@ export async function uploadVideo(
   });
 
   if (uploadResp.data.error) {
-    throw new Error(`Video upload error: ${uploadResp.data.error}`);
+    throw new Error(`Clip upload error: ${uploadResp.data.error}`);
   }
 
-  contentLogger.info(`Video uploaded successfully: video_id=${video_id}`);
+  contentLogger.info(`VK Clip uploaded successfully: video_id=${video_id}`);
 
   return {
     videoId: Math.abs(video_id),
@@ -68,65 +74,8 @@ export async function uploadVideo(
   };
 }
 
-export async function schedulePost(
-  videoId: number,
-  ownerId: number,
-  publishAt: number
-): Promise<number> {
-  const token = config.vk.userToken || config.vk.groupToken;
-  const groupId = config.vk.groupId;
-
-  const attachment = `video${ownerId}_${videoId}`;
-
-  const resp = await axios.post('https://api.vk.com/method/wall.post', null, {
-    params: {
-      access_token: token,
-      v: '5.199',
-      owner_id: -groupId,
-      from_group: 1,
-      attachments: attachment,
-      publish_date: publishAt,
-    },
-    timeout: 30000,
-  });
-
-  if (resp.data.error) {
-    throw new Error(`wall.post error: ${resp.data.error.error_msg}`);
-  }
-
-  const postId: number = resp.data.response.post_id;
-  contentLogger.info(`Post scheduled: post_id=${postId}, publish_at=${new Date(publishAt * 1000).toISOString()}`);
-  return postId;
-}
-
-export async function postImmediately(
-  videoId: number,
-  ownerId: number,
-  message = ''
-): Promise<number> {
-  const token = config.vk.userToken || config.vk.groupToken;
-  const groupId = config.vk.groupId;
-
-  const attachment = `video${ownerId}_${videoId}`;
-
-  const resp = await axios.post('https://api.vk.com/method/wall.post', null, {
-    params: {
-      access_token: token,
-      v: '5.199',
-      owner_id: -groupId,
-      from_group: 1,
-      message,
-      attachments: attachment,
-    },
-    timeout: 30000,
-  });
-
-  if (resp.data.error) {
-    throw new Error(`wall.post error: ${resp.data.error.error_msg}`);
-  }
-
-  return resp.data.response.post_id;
-}
+/** @deprecated Use uploadVideoAsClip instead (posts to Clips, not wall). */
+export const uploadVideo = uploadVideoAsClip;
 
 export async function deleteLocalFile(filePath: string): Promise<void> {
   try {
