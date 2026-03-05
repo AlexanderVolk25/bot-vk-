@@ -1,91 +1,93 @@
 @echo off
-chcp 65001 >nul
 title GoldMine VK Bot
 
 echo.
 echo  ==========================================
-echo   GoldMine VK Bot — Запуск без Docker
+echo   GoldMine VK Bot - Launch without Docker
 echo  ==========================================
 echo.
 
-:: Проверяем Node.js
+:: Check Node.js
 where node >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ОШИБКА] Node.js не найден!
-    echo Скачайте и установите Node.js 20 LTS с сайта:
+    echo [ERROR] Node.js not found!
+    echo Please download and install Node.js 20 LTS from:
     echo   https://nodejs.org/en/download
     echo.
+    echo Check "Add to PATH" during installation, then re-run this script.
     pause
     exit /b 1
 )
 
-for /f "tokens=1 delims=v" %%i in ('node -v') do set NODE_VER=%%i
-echo [OK] Node.js найден: %NODE_VER%
+for /f "tokens=*" %%i in ('node -v') do set NODE_VER=%%i
+echo [OK] Node.js found: %NODE_VER%
 
-:: Проверяем npm
+:: Check npm
 where npm >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ОШИБКА] npm не найден. Переустановите Node.js.
+    echo [ERROR] npm not found. Please reinstall Node.js.
     pause
     exit /b 1
 )
-echo [OK] npm найден.
+echo [OK] npm found.
 
-:: Проверяем .env
+:: Create .env from example if missing
 if not exist ".env" (
     if exist ".env.example" (
-        echo [INFO] Файл .env не найден — копируем из .env.example...
+        echo [INFO] .env not found - copying from .env.example...
         copy ".env.example" ".env" >nul
-        echo [ВАЖНО] Откройте файл .env в блокноте и заполните токены VK!
         echo.
-        echo Нажмите Enter после того, как заполните .env...
+        echo [ACTION REQUIRED] Fill in your VK tokens in .env before continuing.
+        echo   Opening .env in Notepad now...
+        echo   Save and close Notepad, then press any key here to continue.
+        echo.
         notepad .env
         pause
     ) else (
-        echo [ОШИБКА] Файл .env.example не найден. Скачайте проект заново.
+        echo [ERROR] .env.example not found. Please re-download the project.
         pause
         exit /b 1
     )
 )
-echo [OK] Файл .env найден.
+echo [OK] .env found.
 
-:: Устанавливаем зависимости
+:: Install dependencies (only on first run)
 if not exist "node_modules" (
     echo.
-    echo [INFO] Устанавливаем зависимости (npm install)...
-    echo        Это может занять 1-3 минуты...
+    echo [INFO] Installing dependencies (npm install)...
+    echo        This may take 1-3 minutes on first run...
     npm install
     if %errorlevel% neq 0 (
-        echo [ОШИБКА] npm install завершился с ошибкой.
+        echo [ERROR] npm install failed. Check the output above.
         pause
         exit /b 1
     )
-    echo [OK] Зависимости установлены.
+    echo [OK] Dependencies installed.
 ) else (
-    echo [OK] node_modules уже существует, пропускаем установку.
+    echo [OK] node_modules already exists, skipping install.
 )
 
-:: Собираем TypeScript
+:: Build TypeScript
 echo.
-echo [INFO] Компилируем TypeScript (npm run build)...
+echo [INFO] Compiling TypeScript (npm run build)...
 npm run build
 if %errorlevel% neq 0 (
-    echo [ОШИБКА] Сборка завершилась с ошибкой.
+    echo [ERROR] Build failed. Check the TypeScript errors above.
     pause
     exit /b 1
 )
-echo [OK] Сборка успешна.
+echo [OK] Build successful.
 
-:: Создаём нужные папки
+:: Ensure data and log directories exist
 if not exist "data" mkdir data
 if not exist "logs" mkdir logs
 
-:: Запускаем бота
+:: Launch bot
 echo.
 echo  ==========================================
-echo   Бот запущен!
-echo   Админ-панель: http://localhost:3000
-echo   Для остановки нажмите Ctrl+C
+echo   Bot is running!
+echo   Admin panel: http://localhost:3000
+echo   Press Ctrl+C to stop.
 echo  ==========================================
 echo.
 
