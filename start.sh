@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+cd "$(dirname "$0")" || { echo "[ОШИБКА] Не удалось перейти в директорию скрипта."; exit 1; }
 
 echo ""
 echo " =========================================="
@@ -30,27 +30,27 @@ if ! command -v ffmpeg &>/dev/null; then
     echo "[ПРЕДУПРЕЖДЕНИЕ] ffmpeg не найден — обработка видео будет недоступна."
     echo "  Ubuntu/Debian: sudo apt-get install -y ffmpeg"
     echo "  macOS:         brew install ffmpeg"
-    echo "  Windows:       скачайте с https://ffmpeg.org/download.html"
     echo ""
 fi
 
 # Проверяем yt-dlp
 if ! command -v yt-dlp &>/dev/null; then
     echo "[ПРЕДУПРЕЖДЕНИЕ] yt-dlp не найден — скачивание видео с YouTube будет недоступно."
-    echo "  Linux/macOS: pip3 install yt-dlp  ИЛИ  sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp"
-    echo "  Windows:     скачайте yt-dlp.exe с https://github.com/yt-dlp/yt-dlp/releases/latest"
+    echo "  Linux/macOS: pip3 install yt-dlp"
     echo ""
 fi
 
 # Проверяем .env
 if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
-        echo "[INFO] Файл .env не найден — копируем из .env.example..."
         cp .env.example .env
-        echo "[ВАЖНО] Откройте файл .env и заполните токены VK перед запуском!"
-        echo "  nano .env   или   gedit .env   или любой текстовый редактор"
         echo ""
-        read -p "Нажмите Enter после того, как заполните .env..."
+        echo "[ACTION REQUIRED] Файл .env создан из .env.example."
+        echo "  Откройте .env и заполните токены VK:"
+        echo "    nano .env"
+        echo ""
+        echo "  После заполнения запустите скрипт снова."
+        exit 0
     else
         echo "[ОШИБКА] Файл .env.example не найден. Скачайте проект заново."
         exit 1
@@ -58,21 +58,30 @@ if [ ! -f ".env" ]; then
 fi
 echo "[OK] Файл .env найден."
 
-# Устанавливаем зависимости
-if [ ! -d "node_modules" ]; then
+# Устанавливаем зависимости (проверяем наличие tsc как признак полной установки)
+if [ ! -f "node_modules/.bin/tsc" ]; then
     echo ""
-    echo "[INFO] Устанавливаем зависимости (npm install)..."
-    echo "       Это может занять 1-3 минуты..."
-    npm install
+    echo "[INFO] Устанавливаем зависимости (~1-3 минуты при первом запуске)..."
+    npm install --include=dev
+    if [ $? -ne 0 ]; then
+        echo "[ОШИБКА] npm install завершился с ошибкой."
+        exit 1
+    fi
     echo "[OK] Зависимости установлены."
-else
-    echo "[OK] node_modules уже существует, пропускаем установку."
 fi
 
 # Компилируем TypeScript
 echo ""
-echo "[INFO] Компилируем TypeScript (npm run build)..."
+echo "[INFO] Компилируем TypeScript..."
 npm run build
+if [ $? -ne 0 ]; then
+    echo "[ОШИБКА] Сборка завершилась с ошибкой. Проверьте ошибки выше."
+    exit 1
+fi
+if [ ! -f "dist/index.js" ]; then
+    echo "[ОШИБКА] dist/index.js не создан. Проверьте tsconfig.json или запустите: npm run build"
+    exit 1
+fi
 echo "[OK] Сборка успешна."
 
 # Создаём нужные папки
@@ -88,3 +97,9 @@ echo " =========================================="
 echo ""
 
 node dist/index.js
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "[ОШИБКА] Бот завершился с кодом $EXIT_CODE."
+    echo "  Проверьте вывод выше для деталей."
+fi

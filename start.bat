@@ -1,4 +1,11 @@
 @echo off
+:: Keep the console window open on exit.
+:: When double-clicked, relaunches itself via cmd /k so the CMD window stays open
+:: after the script finishes. The user only sees one window; type EXIT to close it.
+if /i not "%~1"=="--keepopen" (
+    cmd /k ""%~dpnx0" --keepopen"
+    exit /b
+)
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 title GoldMine VK Bot
@@ -13,78 +20,62 @@ echo.
 where node >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Node.js not found!
-    echo Please download and install Node.js 20 LTS from:
-    echo   https://nodejs.org/en/download
-    echo.
-    echo Check "Add to PATH" during installation, then re-run this script.
-    pause
-    exit /b 1
+    echo         Download: https://nodejs.org/en/download
+    echo         Enable "Add to PATH" during install, then re-run.
+    goto :done
 )
-
 for /f "tokens=*" %%i in ('node -v') do set NODE_VER=%%i
-echo [OK] Node.js found: %NODE_VER%
+echo [OK] Node.js %NODE_VER%
 
 :: Check npm
 where npm >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] npm not found. Please reinstall Node.js.
-    pause
-    exit /b 1
+    echo [ERROR] npm not found. Reinstall Node.js.
+    goto :done
 )
 echo [OK] npm found.
 
 :: Create .env from example if missing
 if not exist ".env" (
     if exist ".env.example" (
-        echo [INFO] .env not found - copying from .env.example...
         copy ".env.example" ".env" >nul
         echo.
-        echo [ACTION REQUIRED] Fill in your VK tokens in .env before continuing.
-        echo   Opening .env in Notepad now...
-        echo   Save and close Notepad, then press any key here to continue.
+        echo [ACTION REQUIRED] .env created from .env.example.
+        echo         Open .env and fill in your VK tokens:
+        echo           %~dp0.env
         echo.
-        notepad .env
-        pause
+        echo         Save .env, then run this script again.
+        goto :done
     ) else (
-        echo [ERROR] .env.example not found. Please re-download the project.
-        pause
-        exit /b 1
+        echo [ERROR] .env.example not found. Re-download the project.
+        goto :done
     )
 )
 echo [OK] .env found.
 
-:: Install dependencies if missing or incomplete (checks for TypeScript compiler as a devDep sentinel)
+:: Install dependencies if missing or incomplete (tsc.cmd as devDep sentinel)
 if not exist "node_modules\.bin\tsc.cmd" (
     echo.
-    echo [INFO] Installing dependencies (npm install)...
-    echo        This may take 1-3 minutes on first run...
+    echo [INFO] Installing dependencies (~1-3 min on first run)...
     npm install --include=dev
     if !errorlevel! neq 0 (
         echo [ERROR] npm install failed. Check the output above.
-        pause
-        exit /b 1
+        goto :done
     )
     echo [OK] Dependencies installed.
-) else (
-    echo [OK] Dependencies already installed.
 )
 
 :: Build TypeScript
 echo.
-echo [INFO] Compiling TypeScript (npm run build)...
+echo [INFO] Compiling TypeScript...
 npm run build
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo [ERROR] Build failed. Check the TypeScript errors above.
-    pause
-    exit /b 1
+    goto :done
 )
-
-:: Verify the build actually produced the entry point
 if not exist "dist\index.js" (
-    echo [ERROR] dist\index.js was not created by the build.
-    echo         Try deleting node_modules and re-running this script.
-    pause
-    exit /b 1
+    echo [ERROR] dist\index.js was not created. Delete node_modules and retry.
+    goto :done
 )
 echo [OK] Build successful.
 
@@ -105,7 +96,11 @@ node dist\index.js
 
 if !errorlevel! neq 0 (
     echo.
-    echo [ERROR] Bot exited with error code !errorlevel!.
+    echo [ERROR] Bot exited with code !errorlevel!.
     echo         Check the output above for details.
 )
-pause
+
+:done
+echo.
+echo  Script finished. Type EXIT to close this window.
+echo.
