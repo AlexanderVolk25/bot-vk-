@@ -53,12 +53,12 @@ if not exist ".env" (
 )
 echo [OK] .env found.
 
-:: Install dependencies (only on first run)
-if not exist "node_modules" (
+:: Install dependencies if missing or incomplete (checks for TypeScript compiler as a devDep sentinel)
+if not exist "node_modules\.bin\tsc.cmd" (
     echo.
     echo [INFO] Installing dependencies (npm install)...
     echo        This may take 1-3 minutes on first run...
-    npm install
+    npm install --include=dev
     if !errorlevel! neq 0 (
         echo [ERROR] npm install failed. Check the output above.
         pause
@@ -66,7 +66,7 @@ if not exist "node_modules" (
     )
     echo [OK] Dependencies installed.
 ) else (
-    echo [OK] node_modules already exists, skipping install.
+    echo [OK] Dependencies already installed.
 )
 
 :: Build TypeScript
