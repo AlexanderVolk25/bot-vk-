@@ -94,4 +94,9 @@ echo.
 
 node dist/index.js
 
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] Bot exited with error code %errorlevel%.
+    echo         Check the output above for details.
+)
 pause
