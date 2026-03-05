@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="GoldMine VK Bot Admin Panel" />
+  <title>GoldMine Admin</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== Login Page ===== -->
+<div id="login-page" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>⛏ GoldMine</h1>
+      <p>Панель управления ботом</p>
+    </div>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="login-password">Пароль</label>
+        <input
+          id="login-password"
+          type="password"
+          placeholder="Введите пароль..."
+          autocomplete="current-password"
+          required
+        />
+      </div>
+      <button type="submit" class="btn-login">🔑 Войти</button>
+      <div id="login-error" class="login-error"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Main App ===== -->
+<div id="app" style="display:none">
+
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">⛏ GoldMine</div>
+      <div class="sidebar-subtitle">Bot Admin Panel v1.0</div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section">Основное</div>
+      <div class="nav-item active" data-page="dashboard">
+        <span class="icon">📊</span>
+        Dashboard
+      </div>
+      <div class="nav-item" data-page="queue">
+        <span class="icon">📋</span>
+        Очередь
+      </div>
+      <div class="nav-item" data-page="schedule">
+        <span class="icon">📅</span>
+        Расписание
+      </div>
+
+      <div class="nav-section">Сообщество</div>
+      <div class="nav-item" data-page="moderation">
+        <span class="icon">🛡️</span>
+        Модерация
+      </div>
+      <div class="nav-item" data-page="minecraft">
+        <span class="icon">⛏️</span>
+        Minecraft
+      </div>
+
+      <div class="nav-section">Система</div>
+      <div class="nav-item" data-page="settings">
+        <span class="icon">⚙️</span>
+        Настройки
+      </div>
+      <div class="nav-item" data-page="logs">
+        <span class="icon">📝</span>
+        Логи
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button id="btn-logout" class="btn-logout">
+        <span>🚪</span> Выйти
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div id="main">
+    <!-- Header -->
+    <header id="header">
+      <div class="header-title" id="header-title">Dashboard</div>
+      <div class="header-actions">
+        <span class="status-dot" title="Система работает"></span>
+        <span style="font-size:12px;color:var(--text-muted)">GoldMine Bot</span>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <main id="content">
+
+      <!-- Dashboard Page -->
+      <div id="page-dashboard" class="page active">
+        <div class="loading">
+          <div class="spinner"></div>
+          <br>Загрузка...
+        </div>
+      </div>
+
+      <!-- Queue Page -->
+      <div id="page-queue" class="page">
+        <div class="loading">
+          <div class="spinner"></div>
+          <br>Загрузка...
+        </div>
+      </div>
+
+      <!-- Schedule Page -->
+      <div id="page-schedule" class="page">
+        <div class="loading">
+          <div class="spinner"></div>
+          <br>Загрузка...
+        </div>
+      </div>
+
+      <!-- Moderation Page -->
+      <div id="page-moderation" class="page">
+        <div class="loading">
+          <div class="spinner"></div>
+          <br>Загрузка...
+        </div>
+      </div>
+
+      <!-- Minecraft Page -->
+      <div id="page-minecraft" class="page">
+        <div class="loading">
+          <div class="spinner"></div>
+          <br>Загрузка...
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="page-settings" class="page">
+        <div class="loading">
+          <div class="spinner"></div>
+          <br>Загрузка...
+        </div>
+      </div>
+
+      <!-- Logs Page -->
+      <div id="page-logs" class="page">
+        <div class="loading">
+          <div class="spinner"></div>
+          <br>Загрузка...
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Toast Notifications -->
+<div id="toast-container"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
