@@ -1,276 +1,426 @@
 # ⛏ GoldMine VK Bot
 
-Smart VK group bot + admin panel for the **GoldMine** Minecraft/gaming community.
+Умный VK-бот + админ-панель для сообщества **GoldMine** (Minecraft/Rust).
 
-## 🚀 Features
+---
 
-- **VK Bot** — long-polling bot with command handling and moderation
-- **Auto Content Pipeline** — search YouTube, download via yt-dlp, add outro, upload to VK, schedule posts
-- **Anti-Spam & Moderation** — flood detection, profanity filter, ad/link filter, raid quarantine mode, risk scoring
-- **Role System** — Banned / User / Trusted / Moderator / Admin / Owner
-- **Minecraft Status** — live server ping with caching
-- **Scheduler** — cron-based posting with quiet hours and daily post limits
-- **Duplicate Detection** — YouTube ID check, SHA-256 file hash, perceptual hash (pHash)
-- **Admin Panel** — dark-themed SPA with dashboard, queue, schedule, moderation, settings, logs
-- **SQLite Database** — WAL mode, full persistence of tasks, events, roles, settings
-- **In-Memory Queue** — persistent via SQLite, no Redis required
+## 📋 Содержание
 
-## 🛠 Tech Stack
+1. [Что нужно скачать](#-что-нужно-скачать)
+2. [Установка на Windows (пошагово)](#-установка-на-windows-пошагово)
+3. [Установка на Linux / macOS](#-установка-на-linux--macos)
+4. [Настройка .env (токены VK и прочее)](#-настройка-env)
+5. [Быстрый запуск одним файлом](#-быстрый-запуск-одним-файлом)
+6. [Запуск вручную (шаг за шагом)](#-запуск-вручную-шаг-за-шагом)
+7. [Открыть админ-панель](#-открыть-админ-панель)
+8. [Команды бота](#-команды-бота)
+9. [Описание всех переменных .env](#-описание-всех-переменных-env)
+10. [Функции бота](#-функции)
+11. [Docker (альтернатива)](#-docker-альтернатива)
 
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Node.js 20 + TypeScript 5 |
-| VK API | vk-io 4.x |
-| Web API | Express.js 4 |
-| Database | better-sqlite3 (SQLite WAL) |
-| Queue | In-memory + SQLite persistence |
-| Logging | Winston (file + console) |
-| Auth | bcrypt + express-session |
-| Scheduler | node-cron |
-| Video | fluent-ffmpeg + @ffmpeg-installer/ffmpeg |
-| Duplicate Check | sharp (pHash) + SHA-256 |
-| Minecraft Ping | minecraft-server-util |
-| HTTP Client | axios |
-| Validation | zod |
-| Frontend | Vanilla JS SPA |
+---
 
-## 📁 Project Structure
+## 📦 Что нужно скачать
 
-```
-goldmine-vk-bot/
-├── src/
-│   ├── index.ts                    # Entry point
-│   ├── logger/index.ts             # Winston loggers
-│   ├── db/index.ts                 # SQLite init & migrations
-│   ├── config/settings.ts          # Config + env parsing
-│   ├── queue/queue.ts              # In-memory task queue
-│   ├── bot/
-│   │   ├── index.ts                # VK bot setup
-│   │   └── handlers/
-│   │       ├── commands.ts         # Bot commands (/status, /queue, etc.)
-│   │       └── moderation.ts       # Auto-moderation handler
-│   ├── modules/
-│   │   ├── content/
-│   │   │   ├── youtube.ts          # YouTube search + yt-dlp download
-│   │   │   ├── video-processor.ts  # ffmpeg outro + frame extraction
-│   │   │   ├── duplicate-checker.ts# SHA256 + pHash dedup
-│   │   │   └── vk-uploader.ts      # VK video.save + wall.post
-│   │   ├── moderation/
-│   │   │   ├── roles.ts            # Role system (0-5)
-│   │   │   ├── anti-spam.ts        # Flood/profanity/ad checker
-│   │   │   ├── risk-score.ts       # Risk scoring with decay
-│   │   │   └── commands.ts         # /warn /mute /kick /ban commands
-│   │   ├── minecraft/
-│   │   │   └── status.ts           # Minecraft server ping
-│   │   └── scheduler/
-│   │       └── scheduler.ts        # Cron-based posting scheduler
-│   └── api/
-│       ├── index.ts                # Express app factory
-│       ├── middleware/auth.ts       # Session auth + bcrypt
-│       └── routes/
-│           ├── dashboard.ts
-│           ├── queue.ts
-│           ├── schedule.ts
-│           ├── moderation.ts
-│           ├── minecraft.ts
-│           ├── settings.ts
-│           └── logs.ts
-├── admin/
-│   ├── index.html                  # Admin panel SPA
-│   ├── style.css                   # Dark theme CSS
-│   └── app.js                      # Vanilla JS SPA router
-├── data/                           # SQLite database (gitignored)
-├── logs/                           # Log files (gitignored)
-├── .env.example
-├── package.json
-├── tsconfig.json
-├── Dockerfile
-└── docker-compose.yml
-```
+Перед запуском установите следующие программы:
 
-## ⚙️ Setup
+### 1. Node.js 20 LTS *(обязательно)*
 
-### 1. Clone and install
+> Node.js — это среда выполнения JavaScript, на которой работает бот.
 
+- **Скачать:** https://nodejs.org/en/download  
+- Выбирайте версию **20 LTS** (кнопка «Windows Installer (.msi)» для Windows)
+- При установке поставьте галочку **«Add to PATH»**
+- После установки откройте командную строку и проверьте:
+  ```
+  node -v
+  ```
+  Должно вывести что-то вроде `v20.11.0`
+
+### 2. Git *(обязательно — для скачивания кода)*
+
+> Git — инструмент для скачивания и обновления кода из GitHub.
+
+- **Скачать:** https://git-scm.com/download/win  
+- Установите с настройками по умолчанию
+- После установки проверьте:
+  ```
+  git --version
+  ```
+
+### 3. ffmpeg *(нужен для обработки видео)*
+
+> ffmpeg — программа для обработки видео (добавление аутро, конвертация).
+
+**Windows:**
+1. Скачайте архив с https://www.gyan.dev/ffmpeg/builds/ → раздел **«release builds»** → файл `ffmpeg-release-essentials.zip`
+2. Распакуйте архив, например в `C:\ffmpeg`
+3. Добавьте путь `C:\ffmpeg\bin` в системную переменную PATH:
+   - Нажмите `Win + R`, введите `sysdm.cpl`
+   - Вкладка «Дополнительно» → «Переменные среды»
+   - В разделе «Системные переменные» найдите `Path` → «Изменить» → «Создать» → введите `C:\ffmpeg\bin`
+   - Нажмите OK
+4. Проверьте в новой командной строке:
+   ```
+   ffmpeg -version
+   ```
+
+**Linux (Ubuntu/Debian):**
 ```bash
-git clone <repo>
-cd goldmine-vk-bot
+sudo apt-get install -y ffmpeg
+```
+
+**macOS:**
+```bash
+brew install ffmpeg
+```
+
+### 4. yt-dlp *(нужен для скачивания видео с YouTube)*
+
+> yt-dlp — утилита для скачивания видео с YouTube.
+
+**Windows:**
+1. Скачайте файл `yt-dlp.exe` с https://github.com/yt-dlp/yt-dlp/releases/latest
+2. Положите `yt-dlp.exe` в папку `C:\ffmpeg\bin` (там уже есть ffmpeg, и эта папка уже в PATH)
+3. Проверьте в командной строке:
+   ```
+   yt-dlp --version
+   ```
+
+**Linux/macOS:**
+```bash
+pip3 install yt-dlp
+# или
+sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+  -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp
+```
+
+---
+
+## 🪟 Установка на Windows (пошагово)
+
+### Шаг 1 — Скачайте бот из GitHub
+
+Откройте командную строку (`Win + R` → `cmd`) и выполните:
+
+```cmd
+git clone https://github.com/AlexanderVolk25/bot-vk- C:\goldmine-bot
+cd C:\goldmine-bot
+```
+
+> Если папка `C:\goldmine-bot` уже существует — удалите её и повторите.
+
+### Шаг 2 — Настройте файл .env
+
+```cmd
+copy .env.example .env
+notepad .env
+```
+
+Откроется блокнот. Заполните **как минимум** следующие строки (остальные можно оставить как есть):
+
+```env
+VK_GROUP_TOKEN=токен_вашей_группы
+VK_GROUP_ID=123456789
+VK_BOT_OWNER_ID=ваш_id_вк
+ADMIN_PASSWORD=придумайте_пароль
+SESSION_SECRET=случайный_длинный_текст_12345
+```
+
+Сохраните файл (`Ctrl + S`), закройте блокнот.  
+Подробнее о том, где взять токены — см. раздел [«Настройка .env»](#-настройка-env) ниже.
+
+### Шаг 3 — Запустите бот
+
+Дважды кликните на файл **`start.bat`** в папке проекта.
+
+Скрипт сам:
+- Проверит наличие Node.js
+- Установит все зависимости (`npm install`)
+- Скомпилирует TypeScript (`npm run build`)
+- Запустит бот
+
+Или вручную в командной строке:
+
+```cmd
 npm install
-```
-
-### 2. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env with your values
-```
-
-Required:
-- `VK_GROUP_TOKEN` — VK group access token (with `messages`, `wall`, `video` permissions)
-- `VK_GROUP_ID` — Your VK group ID (number only)
-- `VK_BOT_OWNER_ID` — Your VK user ID (bot owner)
-- `ADMIN_PASSWORD` — Admin panel password (change from default!)
-- `SESSION_SECRET` — Random secret for sessions
-
-Optional but recommended:
-- `VK_USER_TOKEN` — User token for video uploads (if group token doesn't have video.save)
-- `YOUTUBE_API_KEY` — YouTube Data API v3 key for content search
-- `MINECRAFT_HOST` — Your Minecraft server host
-
-### 3. Build & run
-
-```bash
-# Development (ts-node)
-npm run dev
-
-# Production build
 npm run build
-npm start
-
-# Admin panel only
-npm run dev:api
+node dist/index.js
 ```
 
-### 4. Docker
+---
+
+## 🐧 Установка на Linux / macOS
+
+### Шаг 1 — Установите Node.js 20
+
+**Ubuntu/Debian:**
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+**macOS:**
+```bash
+brew install node@20
+```
+
+### Шаг 2 — Скачайте и запустите
 
 ```bash
-docker-compose up -d
+git clone https://github.com/AlexanderVolk25/bot-vk- ~/goldmine-bot
+cd ~/goldmine-bot
+cp .env.example .env
+nano .env          # заполните токены
+chmod +x start.sh
+./start.sh
 ```
 
-## 🤖 Bot Commands
+---
 
-All commands start with `/` and can be used in group chats or private messages.
+## 🔑 Настройка .env
 
-| Command | Role Required | Description |
-|---------|--------------|-------------|
-| `/status` | Everyone | Show bot & Minecraft status |
-| `/queue` | Moderator | Show content queue |
-| `/cancel <taskId>` | Admin | Cancel a queue task |
-| `/fetch [query]` | Admin | Search and queue a YouTube video |
-| `/schedule` | Moderator | Show scheduled posts |
-| `/settings <key> <value>` | Admin | Update a setting |
-| `/role` | Admin | Show your role |
+Файл `.env` — это конфигурация бота. Создайте его из примера:
 
-### Moderation commands (in group chats)
+```
+copy .env.example .env    (Windows)
+cp .env.example .env      (Linux/macOS)
+```
 
-| Command | Role Required | Description |
-|---------|--------------|-------------|
-| `/warn [id\|mention] [reason]` | Moderator | Warn a user |
-| `/unwarn [id\|mention]` | Moderator | Remove last warning |
-| `/mute [id\|mention] [minutes] [reason]` | Moderator | Mute a user |
-| `/unmute [id\|mention]` | Moderator | Unmute a user |
-| `/kick [id\|mention] [reason]` | Moderator | Kick a user |
-| `/ban [id\|mention] [days] [reason]` | Admin | Ban a user |
-| `/unban [id\|mention]` | Admin | Unban a user |
-| `/stats [id\|mention]` | Moderator | Show user stats |
-| `/role [id\|mention] <roleName>` | Admin | Set user role |
+### Как получить VK_GROUP_TOKEN (токен группы)
 
-## 🛡️ Roles
+1. Войдите в VK под своим аккаунтом
+2. Перейдите на страницу вашей группы
+3. «Управление» → «Настройки» → «Работа с API»
+4. «Создать ключ» — выберите права: **управление сообществом, сообщения, фотографии, видео, стена**
+5. Скопируйте токен в `VK_GROUP_TOKEN`
 
-| Role | Level | Description |
-|------|-------|-------------|
-| Banned | 0 | Blocked from all interactions |
-| User | 1 | Default role |
-| Trusted | 2 | Trusted member, fewer restrictions |
-| Moderator | 3 | Can warn, mute, kick |
-| Admin | 4 | Can ban, manage roles, configure bot |
-| Owner | 5 | Full access (set via VK_BOT_OWNER_ID) |
+### Как получить VK_GROUP_ID
 
-## 📺 Content Pipeline
+- Откройте страницу группы в браузере
+- Посмотрите на адрес: `vk.com/club**123456789**` — число и есть Group ID
+- Или зайдите в «Управление» → «Настройки», ID написан вверху страницы
+- В `.env` пишите **только цифры** (без минуса)
 
-1. **Search** — YouTube API searches for videos matching configured topics
-2. **Filter** — Duration filter (min/max), existing duplicate check
-3. **Download** — yt-dlp downloads best quality up to 1080p
-4. **Dedup check** — SHA-256 file hash + perceptual hash (8×8 DCT)
-5. **Outro** — ffmpeg appends outro card with group name
-6. **Upload** — VK video.save API, file upload
-7. **Schedule** — wall.post with publish_date, or immediate posting
-8. **Cleanup** — Local files deleted after upload
+### Как получить VK_BOT_OWNER_ID (ваш ID ВКонтакте)
 
-### Scheduler settings
+- Откройте свою страницу ВК
+- Если в адресе `vk.com/id**12345**` — это и есть ваш ID
+- Или зайдите на https://vk.com/usersuggest и посмотрите ID
 
-- `DAILY_POST_LIMIT` — Max posts per day (default: 3)
-- `POST_SCHEDULE_HOURS` — Hours to post at, comma-separated (default: 10,14,18)
-- `QUIET_HOURS_START` / `QUIET_HOURS_END` — No posting during these hours
+### Как получить YOUTUBE_API_KEY
 
-## 🛡️ Anti-Spam
+1. Откройте https://console.cloud.google.com/
+2. Создайте проект
+3. «API и сервисы» → «Библиотека» → найдите **YouTube Data API v3** → «Включить»
+4. «Учётные данные» → «Создать учётные данные» → «Ключ API»
+5. Скопируйте ключ в `YOUTUBE_API_KEY`
 
-The bot automatically detects and handles:
+> Если ключа нет — бот запустится, но автоматический поиск видео работать не будет.
 
-- **Flood** — 5+ messages in 10 seconds → mute
-- **Profanity** — Russian/English profanity list → warn
-- **Ads/Links** — External links and competing communities → mute
-- **Raid** — 10+ joins in 60 seconds → quarantine mode (30 min)
+---
 
-### Risk Score
+## ⚡ Быстрый запуск одним файлом
 
-Each user has a 0-100 risk score:
-- Increases on violations (+5 to +20)
-- Decays by 10%/day when inactive
-- Auto-actions: warn at 50, mute at 75, kick at 90
+### Windows
 
-## 🖥️ Admin Panel
+Дважды кликните на **`start.bat`** в папке проекта.
 
-Access at `http://localhost:3000` (or configured `ADMIN_PORT`).
+Скрипт проверит всё что нужно, установит зависимости и запустит бот.
 
-Default password: `changeme` — **change this immediately** via `ADMIN_PASSWORD` env var.
-
-### Pages
-
-- **Dashboard** — Live stats: queue, posts today, mutes, bans, Minecraft status, audit log
-- **Queue** — View and cancel tasks, manually trigger content fetch
-- **Schedule** — View and cancel scheduled video posts
-- **Moderation** — Browse events, search user by ID, warn/mute/ban actions
-- **Minecraft** — Server status card with player count
-- **Settings** — View/edit database settings (key-value store)
-- **Logs** — Read app/error/audit/moderation/content log files
-
-## 📊 Database Schema
-
-- `videos` — Content pipeline records
-- `queue_tasks` — Task queue persistence
-- `moderation_events` — Moderation action log
-- `user_roles` — User role assignments
-- `user_warnings` — Warning records
-- `user_stats` — Message counts, risk scores
-- `audit_log` — Admin panel actions
-- `settings` — Key-value configuration store
-
-## 🔒 Security Notes
-
-- Admin password is bcrypt-hashed and stored in DB on first run
-- Sessions use httpOnly cookies with 24h TTL
-- Sensitive settings (`admin_password_hash`) are filtered from API responses
-- All SQL queries use parameterized statements (SQLite prepared statements)
-- Log path traversal is prevented by an allowlist of log type names
-
-## 📝 Logs
-
-| File | Contents |
-|------|----------|
-| `logs/app.log` | General application log |
-| `logs/error.log` | Error-level events only |
-| `logs/audit.log` | Admin panel actions |
-| `logs/moderation.log` | Moderation events |
-| `logs/content.log` | Content pipeline events |
-
-All logs rotate at 10MB, keeping 5-10 files.
-
-## 🐳 Docker
+### Linux / macOS
 
 ```bash
-# Build and run
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose down
+./start.sh
 ```
 
-The container installs ffmpeg and yt-dlp automatically.
+---
 
-## 📄 License
+## 🔧 Запуск вручную (шаг за шагом)
 
-MIT — see [LICENSE](LICENSE)
+Если `start.bat` / `start.sh` не работают, запустите по шагам:
+
+```bash
+# 1. Перейдите в папку проекта
+cd C:\goldmine-bot        # Windows
+cd ~/goldmine-bot         # Linux/macOS
+
+# 2. Установите зависимости (один раз)
+npm install
+
+# 3. Скомпилируйте TypeScript (нужно повторять после изменений)
+npm run build
+
+# 4. Создайте папки для данных и логов
+mkdir data
+mkdir logs
+
+# 5. Запустите бот
+node dist/index.js
+```
+
+Бот запустится и будет работать в этом окне. **Не закрывайте окно командной строки** — это остановит бота.
+
+**Режим разработки** (без сборки, для тестов):
+```bash
+npm run dev
+```
+
+---
+
+## 🖥️ Открыть админ-панель
+
+После запуска бота откройте браузер и перейдите по адресу:
+
+```
+http://localhost:3000
+```
+
+- **Логин:** пароль из `ADMIN_PASSWORD` в вашем `.env` (по умолчанию `changeme`)
+- **Смените пароль** сразу после первого входа!
+
+### Страницы админ-панели
+
+| Страница | Описание |
+|----------|---------|
+| Dashboard | Статистика: очередь, посты сегодня, Minecraft, журнал |
+| Queue | Очередь задач (скачивание/обработка/загрузка видео), кнопка «Отмена» |
+| Schedule | Расписание публикаций |
+| Moderation | Журнал модерации, поиск по пользователю, варны/муты/баны |
+| Minecraft | Статус сервера |
+| Settings | Все настройки через веб-интерфейс |
+| Logs | Просмотр лог-файлов |
+
+---
+
+## 🤖 Команды бота
+
+Все команды начинаются с `/` и работают в беседе или в личных сообщениях боту.
+
+| Команда | Роль | Описание |
+|---------|------|---------|
+| `/status` | Все | Статус бота и Minecraft |
+| `/queue` | Модератор | Текущая очередь видео |
+| `/cancel <taskId>` | Администратор | Отменить задачу |
+| `/fetch [запрос]` | Администратор | Найти и поставить в очередь видео с YouTube |
+| `/schedule` | Модератор | Расписание публикаций |
+| `/settings ключ значение` | Администратор | Изменить настройку |
+| `/role` | Администратор | Показать свою роль |
+
+### Команды модерации (в беседе)
+
+| Команда | Роль | Описание |
+|---------|------|---------|
+| `/warn @user [причина]` | Модератор | Предупреждение |
+| `/unwarn @user` | Модератор | Снять последнее предупреждение |
+| `/mute @user [минуты] [причина]` | Модератор | Замутить |
+| `/unmute @user` | Модератор | Размутить |
+| `/kick @user [причина]` | Модератор | Кикнуть |
+| `/ban @user [дни] [причина]` | Администратор | Забанить |
+| `/unban @user` | Администратор | Разбанить |
+| `/stats @user` | Модератор | Статистика пользователя |
+| `/role @user <роль>` | Администратор | Назначить роль |
+
+---
+
+## 📊 Описание всех переменных .env
+
+| Переменная | Обязательно | Описание |
+|-----------|------------|---------|
+| `VK_GROUP_TOKEN` | ✅ Да | Токен сообщества VK |
+| `VK_USER_TOKEN` | Желательно | Токен пользователя (для загрузки видео) |
+| `VK_GROUP_ID` | ✅ Да | ID группы ВК (только цифры) |
+| `VK_BOT_OWNER_ID` | ✅ Да | Ваш ID ВКонтакте (владелец бота) |
+| `ADMIN_PASSWORD` | ✅ Да | Пароль от админ-панели |
+| `ADMIN_PORT` | Нет | Порт для веб-панели (по умолчанию `3000`) |
+| `SESSION_SECRET` | ✅ Да | Секрет сессий (любая случайная строка) |
+| `YOUTUBE_API_KEY` | Нет | Ключ YouTube Data API v3 |
+| `CONTENT_TOPICS` | Нет | Темы для поиска видео через запятую (по умолчанию `Minecraft,Rust,GoldMine`) |
+| `CONTENT_MIN_DURATION` | Нет | Минимальная длина видео в секундах (по умолчанию `120`) |
+| `CONTENT_MAX_DURATION` | Нет | Максимальная длина видео в секундах (по умолчанию `300`) |
+| `OUTRO_DURATION` | Нет | Длительность аутро в секундах (по умолчанию `3`) |
+| `DAILY_POST_LIMIT` | Нет | Максимум постов в день (по умолчанию `3`) |
+| `POST_SCHEDULE_HOURS` | Нет | Часы для публикаций через запятую (по умолчанию `10,14,18`) |
+| `QUIET_HOURS_START` | Нет | Начало тихих часов (по умолчанию `23`) |
+| `QUIET_HOURS_END` | Нет | Конец тихих часов (по умолчанию `9`) |
+| `MINECRAFT_HOST` | Нет | Хост Minecraft-сервера |
+| `MINECRAFT_PORT` | Нет | Порт Minecraft-сервера (по умолчанию `25565`) |
+| `DB_PATH` | Нет | Путь к файлу базы данных (по умолчанию `./data/goldmine.db`) |
+| `LOG_LEVEL` | Нет | Уровень логирования: `debug`, `info`, `warn`, `error` |
+| `LOG_DIR` | Нет | Папка для логов (по умолчанию `./logs`) |
+
+---
+
+## 🎯 Функции
+
+### Контент-пайплайн (YouTube → VK Клипы)
+
+1. **Поиск** — поиск видео по теме в YouTube (Minecraft, Rust, GoldMine)
+2. **Фильтрация** — по длительности (2–5 мин), проверка дублей
+3. **Скачивание** — yt-dlp, качество до 1080p
+4. **Проверка дублей** — SHA-256 хэш файла + перцептивный хэш кадра
+5. **Аутро** — ffmpeg добавляет заставку «Группа GoldMine»
+6. **Загрузка** — публикация в **VK Клипы** группы (не на стену)
+7. **Расписание** — публикация по расписанию (тихие часы, лимит в день)
+8. **Очистка** — локальные файлы удаляются после загрузки
+
+### Модерация беседы
+
+- **Анти-флуд** — 5+ сообщений за 10 сек → мут
+- **Анти-мат** — список нецензурных слов → предупреждение
+- **Анти-реклама** — внешние ссылки → мут
+- **Анти-рейд** — 10+ новых участников за 60 сек → карантин на 30 мин
+
+### Система риска
+
+У каждого пользователя есть рейтинг риска (0–100):
+- Растёт при нарушениях (+5 до +20)
+- Снижается на 10%/день при отсутствии нарушений
+- Автоматические действия: предупреждение при 50, мут при 75, кик при 90
+
+### Роли
+
+| Роль | Уровень | Описание |
+|------|---------|---------|
+| Banned | 0 | Заблокирован |
+| User | 1 | Обычный участник |
+| Trusted | 2 | Доверенный участник |
+| Moderator | 3 | Может варнить, мутить, кикать |
+| Admin | 4 | Может банить, управлять ролями |
+| Owner | 5 | Полный доступ (задаётся через `VK_BOT_OWNER_ID`) |
+
+---
+
+## 🐳 Docker (альтернатива)
+
+Если на вашем компьютере Docker всё же установлен и работает:
+
+```bash
+docker-compose up -d        # Запустить
+docker-compose logs -f      # Смотреть логи
+docker-compose down         # Остановить
+```
+
+Контейнер автоматически установит ffmpeg и yt-dlp.
+
+> Если Docker не работает — используйте инструкцию выше (без Docker).
+
+---
+
+## 📝 Логи
+
+| Файл | Содержимое |
+|------|-----------|
+| `logs/app.log` | Общий лог приложения |
+| `logs/error.log` | Только ошибки |
+| `logs/audit.log` | Действия в админ-панели |
+| `logs/moderation.log` | События модерации |
+| `logs/content.log` | Контент-пайплайн |
+
+Логи ротируются при достижении 10 МБ, хранится до 10 файлов.
+
+---
+
+## 📄 Лицензия
+
+Apache 2.0 — см. [LICENSE](LICENSE)
