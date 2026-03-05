@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 cd /d "%~dp0"
 title GoldMine VK Bot
 
@@ -58,7 +59,7 @@ if not exist "node_modules" (
     echo [INFO] Installing dependencies (npm install)...
     echo        This may take 1-3 minutes on first run...
     npm install
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo [ERROR] npm install failed. Check the output above.
         pause
         exit /b 1
@@ -77,6 +78,14 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+
+:: Verify the build actually produced the entry point
+if not exist "dist\index.js" (
+    echo [ERROR] dist\index.js was not created by the build.
+    echo         Try deleting node_modules and re-running this script.
+    pause
+    exit /b 1
+)
 echo [OK] Build successful.
 
 :: Ensure data and log directories exist
@@ -92,11 +101,11 @@ echo   Press Ctrl+C to stop.
 echo  ==========================================
 echo.
 
-node dist/index.js
+node dist\index.js
 
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo.
-    echo [ERROR] Bot exited with error code %errorlevel%.
+    echo [ERROR] Bot exited with error code !errorlevel!.
     echo         Check the output above for details.
 )
 pause
